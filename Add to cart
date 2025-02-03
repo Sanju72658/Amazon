@@ -1,0 +1,104 @@
+import pytest
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+driver = None
+
+@pytest.fixture(scope="module", autouse=True)
+def setup_teardown():
+    global driver
+    driver = webdriver.Chrome()
+    driver.get("https://www.amazon.co.uk/ref=nav_logo")
+    yield
+    driver.quit()
+
+def test_accept_cookies():
+    try:
+        accept_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.ID, "sp-cc-accept"))
+        )
+        accept_button.click()
+    except Exception as e:
+        pytest.fail(f"Cookie consent popup did not appear or could not be clicked: {e}")
+
+def test_search_google_pixel():
+    search_box = driver.find_element(By.ID, "twotabsearchtextbox")
+    search_box.send_keys("Google Pixel")
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, "two-pane-results-container"))
+        )
+    except Exception as e:
+        pytest.fail(f"Search suggestions did not appear: {e}")
+
+def test_click_google_pixel_9():
+    try:
+        google_pixel_9_suggestion = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "div[aria-label='google pixel 9']"))
+        )
+        google_pixel_9_suggestion.click()
+    except Exception as e:
+        pytest.fail(f"Could not locate or click on 'Google Pixel 9': {e}")
+
+def test_verify_search_results():
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located(
+                (By.CSS_SELECTOR, "h2[aria-label*='Pixel 9 - Unlocked Android Smartphone with Gemini']")
+            )
+        )
+    except Exception as e:
+        pytest.fail(f"Verification Failed: 'Google Pixel 9' results are not ready. {e}")
+
+def test_click_product():
+    try:
+        product_link = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR,
+                                        "h2[aria-label*='Pixel 9 - Unlocked Android Smartphone with Gemini, Advanced Camera, 24-Hour Battery, and 6.3\" Actua Display - Wintergreen, 256GB']"))
+        )
+        product_link.click()
+    except Exception as e:
+        pytest.fail(f"Could not locate or click on the product: {e}")
+
+def test_verify_product_page():
+    try:
+        product_title = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.ID, "productTitle"))
+        )
+        assert "Pixel 9" in product_title.text, "Product title does not match expected text."
+    except Exception as e:
+        pytest.fail(f"Failed to load the product page: {e}")
+
+def test_add_to_cart():
+    try:
+        add_to_cart_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.ID, "add-to-cart-button-ubb"))
+        )
+        add_to_cart_button.click()
+    except Exception as e:
+        pytest.fail(f"Failed to locate or click the 'Add to Cart' button: {e}")
+
+def test_verify_price():
+    try:
+        price_element = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.ID, "sw-subtotal"))
+        )
+        price_symbol = price_element.find_element(By.CLASS_NAME, "a-price-symbol").text
+        price_whole = price_element.find_element(By.CLASS_NAME, "a-price-whole").text
+        price_fraction = price_element.find_element(By.CLASS_NAME, "a-price-fraction").text
+        extracted_price = f"{price_symbol}{price_whole}.{price_fraction}"
+        expected_price = "£659.51"
+        assert extracted_price == expected_price, f"Expected price {expected_price}, but got {extracted_price}"
+    except Exception as e:
+        pytest.fail(f"Failed to locate or verify the price: {e}")
+
+def test_proceed_to_checkout():
+    try:
+        proceed_to_checkout_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "input[name='proceedToRetailCheckout']"))
+        )
+        proceed_to_checkout_button.click()
+    except Exception as e:
+        pytest.fail(f"Failed to locate or click the 'Proceed to Checkout' button: {e}")
